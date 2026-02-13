@@ -13,7 +13,7 @@ app.use(express.static(path.join(__dirname)));
 
 // PostgreSQL connection
 const pool = new Pool({
-    host: '103.2.113.228',
+    host: 'localhost',
     port: 5432,
     database: 'game-test',
     user: 'postgres',
