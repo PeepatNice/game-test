@@ -21,13 +21,30 @@ const pool = new Pool({
     // Connection pool settings
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 15000,  // 15 seconds timeout
+    // Keep connections alive (important for remote servers / Docker)
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
 });
 
-// Test DB connection on startup
-pool.query('SELECT NOW()')
-    .then(() => console.log('✅ Connected to PostgreSQL'))
-    .catch(err => console.error('❌ Database connection error:', err.message));
+// Test DB connection on startup with retry
+async function testConnection(retries = 5) {
+    for (let i = 1; i <= retries; i++) {
+        try {
+            await pool.query('SELECT NOW()');
+            console.log('✅ Connected to PostgreSQL');
+            return;
+        } catch (err) {
+            console.error(`❌ DB connection attempt ${i}/${retries} failed:`, err.message);
+            if (i < retries) {
+                console.log(`   Retrying in 3 seconds...`);
+                await new Promise(r => setTimeout(r, 3000));
+            }
+        }
+    }
+    console.error('⚠️  Could not connect to database. Server will continue but DB features may not work.');
+}
+testConnection();
 
 // ─── API Routes ──────────────────────────────────────────
 
