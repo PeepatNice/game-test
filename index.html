@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hill Climb Racing — เกมรถแข่งขึ้นเขา</title>
+    <meta name="description"
+        content="เกมรถแข่งขึ้นเขาสุดมันส์ แบบ Hill Climb Racing! ขับรถผ่านเนินเขา เก็บเหรียญ และทำระยะทางให้ไกลที่สุด">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Mute Button -->
+    <button id="muteBtn">🔊</button>
+
+    <!-- Menu Screen -->
+    <div id="menuScreen">
+        <h1 class="game-title">HILL CLIMB</h1>
+        <p class="game-subtitle">🏔️ RACING — ขับรถผ่านเนินเขาให้ไกลที่สุด!</p>
+        <button id="startBtn">🏁 เริ่มเกม</button>
+        <div class="menu-controls-hint">
+            <kbd>↑</kbd> / <kbd>W</kbd> เร่ง &nbsp;&nbsp;
+            <kbd>↓</kbd> / <kbd>S</kbd> เบรก &nbsp;&nbsp;
+            <kbd>M</kbd> เปิด/ปิดเสียง<br>
+            หรือใช้ปุ่มสัมผัสบนหน้าจอ
+        </div>
+        <div class="menu-highscore">
+            🏆 สถิติสูงสุด: <span id="menuHighScore">0</span>
+        </div>
+    </div>
+
+    <!-- Game UI -->
+    <div id="gameUI">
+        <div class="ui-left">
+            <div class="ui-panel fuel-container">
+                <div class="fuel-label">⛽ น้ำมัน</div>
+                <div class="fuel-bar">
+                    <div id="fuelFill"></div>
+                </div>
+            </div>
+            <div class="ui-panel coin-display">
+                <div class="coin-icon">$</div>
+                <span id="coinCount">0</span>
+            </div>
+        </div>
+        <div class="ui-right">
+            <div class="ui-panel distance-display">
+                <div class="distance-value" id="distance">0m</div>
+                <div class="distance-label">ระยะทาง</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="key-indicator">
+        <div class="key-box" id="key-brake">S</div>
+        <div class="key-box" id="key-gas">W</div>
+    </div>
+
+    <div id="controls">
+        <div class="control-btn" id="brakeBtn">🛑</div>
+        <div class="control-btn" id="gasBtn">🚀</div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen">
+        <h2 class="gameover-title">จบเกม!</h2>
+        <div class="gameover-stats">
+            <div class="stat-box">
+                <div class="stat-label">ระยะทาง</div>
+                <div class="stat-value" id="finalDistance">0m</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">เหรียญ</div>
+                <div class="stat-value gold" id="finalCoins">0</div>
+            </div>
+            <div class="stat-box" style="grid-column: span 2;">
+                <div class="stat-label">คะแนนรวม</div>
+                <div class="stat-value green" id="finalScore">0</div>
+            </div>
+        </div>
+        <div class="best-section">
+            <div class="best-item">
+                <div class="best-label">🏆 สถิติระยะทาง</div>
+                <div class="best-value" id="bestDistance">0m</div>
+            </div>
+            <div class="best-item">
+                <div class="best-label">🏆 สถิติคะแนน</div>
+                <div class="best-value" id="bestScore">0</div>
+            </div>
+        </div>
+        <button id="restartBtn">🔄 เล่นอีกครั้ง</button>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/terrain.js"></script>
+    <script src="js/car.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/game.js"></script>
+
+    <script>
+        // Show high score on menu
+        const hs = localStorage.getItem('hcr_highScore') || '0';
+        document.getElementById('menuHighScore').textContent = hs;
+    </script>
+</body>
+
+</html>
