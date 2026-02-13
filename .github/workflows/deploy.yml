@@ -80,26 +80,19 @@ jobs:
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_NAME: ghcr.io/${{ steps.image.outputs.name }}:latest
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: GITHUB_TOKEN,IMAGE_NAME
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IMAGE_NAME: ghcr.io/${{ steps.image.outputs.name }}:latest
           script: |
-            # Login to GitHub Container Registry
             echo $GITHUB_TOKEN | docker login ghcr.io --password-stdin -u github
-
-            # Pull latest image
             docker pull $IMAGE_NAME
-
-            # Stop and remove existing container
             docker stop game-test-staging || true
             docker rm game-test-staging || true
-
-            # Run new container
             docker run -d \
               --name game-test-staging \
               --restart unless-stopped \
@@ -127,26 +120,19 @@ jobs:
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_NAME: ghcr.io/${{ steps.image.outputs.name }}:latest
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: GITHUB_TOKEN,IMAGE_NAME
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IMAGE_NAME: ghcr.io/${{ steps.image.outputs.name }}:latest
           script: |
-            # Login to GitHub Container Registry
             echo $GITHUB_TOKEN | docker login ghcr.io --password-stdin -u github
-
-            # Pull latest image
             docker pull $IMAGE_NAME
-
-            # Stop and remove existing container
             docker stop game-test-production || true
             docker rm game-test-production || true
-
-            # Run new container
             docker run -d \
               --name game-test-production \
               --restart unless-stopped \
@@ -158,3 +144,4 @@ jobs:
               -e DB_USER=${{ secrets.DB_USER }} \
               -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
               $IMAGE_NAME
+
