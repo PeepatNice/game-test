@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
@@ -13,13 +14,13 @@ app.use(express.static(path.join(__dirname)));
 
 // PostgreSQL connection
 const pool = new Pool({
-    host: 'localhost',
-    port: 5432,
-    database: 'game-test',
-    user: 'postgres',
-    password: 'w,jmik[8iy[',
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT) || 5432,
+    database: process.env.DB_NAME || 'game-test',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || '',
     // Connection pool settings
-    max: 10,
+    max: parseInt(process.env.DB_MAX_CONNECTIONS) || 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 15000,  // 15 seconds timeout
     // Keep connections alive (important for remote servers / Docker)
