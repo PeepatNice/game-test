@@ -96,9 +96,9 @@ jobs:
             docker run -d \
               --name game-test-staging \
               --restart unless-stopped \
-              -p 3000:3000 \
+              --network host \
               -e PORT=3000 \
-              -e DB_HOST=${{ secrets.DB_HOST }} \
+              -e DB_HOST=localhost \
               -e DB_PORT=${{ secrets.DB_PORT }} \
               -e DB_NAME=${{ secrets.DB_NAME }} \
               -e DB_USER=${{ secrets.DB_USER }} \
@@ -137,9 +137,9 @@ jobs:
             docker run -d \
               --name game-test-production \
               --restart unless-stopped \
-              -p 3000:3000 \
+              --network host \
               -e PORT=3000 \
-              -e DB_HOST=${{ secrets.DB_HOST }} \
+              -e DB_HOST=localhost \
               -e DB_PORT=${{ secrets.DB_PORT }} \
               -e DB_NAME=${{ secrets.DB_NAME }} \
               -e DB_USER=${{ secrets.DB_USER }} \
