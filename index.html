@@ -16,11 +16,74 @@
     <!-- Mute Button -->
     <button id="muteBtn">🔊</button>
 
+    <!-- Login Screen -->
+    <div id="loginScreen">
+        <h1 class="game-title">HILL CLIMB</h1>
+        <p class="game-subtitle">🏔️ RACING</p>
+        <div class="login-form">
+            <label class="login-label">กรอกชื่อผู้เล่น</label>
+            <input type="text" id="playerNameInput" placeholder="ชื่อของคุณ..." maxlength="20" autocomplete="off">
+            <button id="loginBtn">🎮 เข้าเกม</button>
+            <div id="loginError" class="login-error"></div>
+            <div id="loginLoading" class="login-loading" style="display:none;">⏳ กำลังเชื่อมต่อ...</div>
+        </div>
+    </div>
+
     <!-- Menu Screen -->
-    <div id="menuScreen">
+    <div id="menuScreen" style="display:none;">
         <h1 class="game-title">HILL CLIMB</h1>
         <p class="game-subtitle">🏔️ RACING — ขับรถผ่านเนินเขาให้ไกลที่สุด!</p>
+        <div class="player-welcome">ยินดีต้อนรับ, <span id="playerNameDisplay"></span>!</div>
+
+        <!-- Level Selection -->
+        <div class="selection-section">
+            <h3 class="section-title">🗺️ เลือกด่าน</h3>
+            <div class="selection-grid levels-grid">
+                <div class="select-card selected" data-level="grassland">
+                    <div class="card-icon">🌿</div>
+                    <div class="card-name">ทุ่งหญ้า</div>
+                    <div class="card-desc">ง่าย</div>
+                </div>
+                <div class="select-card" data-level="desert">
+                    <div class="card-icon">🏜️</div>
+                    <div class="card-name">ทะเลทราย</div>
+                    <div class="card-desc">ปานกลาง</div>
+                </div>
+                <div class="select-card" data-level="snow">
+                    <div class="card-icon">❄️</div>
+                    <div class="card-name">หิมะ</div>
+                    <div class="card-desc">ยาก</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skin Selection -->
+        <div class="selection-section">
+            <h3 class="section-title">🚗 เลือก Skin รถ</h3>
+            <div class="selection-grid skins-grid">
+                <div class="select-card skin-card selected" data-skin="red">
+                    <div class="skin-preview" style="background: #e74c3c;"></div>
+                    <div class="card-name">แดง</div>
+                </div>
+                <div class="select-card skin-card" data-skin="blue">
+                    <div class="skin-preview" style="background: #3498db;"></div>
+                    <div class="card-name">น้ำเงิน</div>
+                </div>
+                <div class="select-card skin-card" data-skin="yellow">
+                    <div class="skin-preview" style="background: #f1c40f;"></div>
+                    <div class="card-name">เหลือง</div>
+                </div>
+                <div class="select-card skin-card" data-skin="green">
+                    <div class="skin-preview" style="background: #27ae60;"></div>
+                    <div class="card-name">เขียว</div>
+                </div>
+            </div>
+        </div>
+
         <button id="startBtn">🏁 เริ่มเกม</button>
+        <div class="menu-buttons-row">
+            <button id="scoreboardBtn" class="btn-secondary">🏅 Scoreboard</button>
+        </div>
         <div class="menu-controls-hint">
             <kbd>↑</kbd> / <kbd>W</kbd> เร่ง &nbsp;&nbsp;
             <kbd>↓</kbd> / <kbd>S</kbd> เบรก &nbsp;&nbsp;
@@ -29,6 +92,26 @@
         </div>
         <div class="menu-highscore">
             🏆 สถิติสูงสุด: <span id="menuHighScore">0</span>
+        </div>
+    </div>
+
+    <!-- Scoreboard Modal -->
+    <div id="scoreboardModal" style="display:none;">
+        <div class="modal-content">
+            <h2 class="modal-title">🏅 Scoreboard — Top 10</h2>
+            <div class="leaderboard-loading" id="modalLeaderboardLoading">กำลังโหลด...</div>
+            <table class="leaderboard-table" id="modalLeaderboardTable" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>ชื่อ</th>
+                        <th>ระยะทาง</th>
+                        <th>คะแนน</th>
+                    </tr>
+                </thead>
+                <tbody id="modalLeaderboardBody"></tbody>
+            </table>
+            <button id="closeScoreboardBtn" class="btn-secondary" style="margin-top:16px;">✕ ปิด</button>
         </div>
     </div>
 
@@ -92,7 +175,28 @@
                 <div class="best-value" id="bestScore">0</div>
             </div>
         </div>
-        <button id="restartBtn">🔄 เล่นอีกครั้ง</button>
+
+        <!-- Leaderboard -->
+        <div class="leaderboard-section">
+            <h3 class="leaderboard-title">🏅 อันดับผู้เล่น Top 10</h3>
+            <div class="leaderboard-loading" id="leaderboardLoading">กำลังโหลด...</div>
+            <table class="leaderboard-table" id="leaderboardTable" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>ชื่อ</th>
+                        <th>ระยะทาง</th>
+                        <th>คะแนน</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody"></tbody>
+            </table>
+        </div>
+
+        <div class="gameover-buttons">
+            <button id="restartBtn">🔄 เล่นอีกครั้ง</button>
+            <button id="mainMenuBtn" class="btn-secondary">🏠 เมนูหลัก</button>
+        </div>
     </div>
 
     <!-- Scripts -->
@@ -102,12 +206,6 @@
     <script src="js/renderer.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/game.js"></script>
-
-    <script>
-        // Show high score on menu
-        const hs = localStorage.getItem('hcr_highScore') || '0';
-        document.getElementById('menuHighScore').textContent = hs;
-    </script>
 </body>
 
 </html>

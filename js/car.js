@@ -1,6 +1,19 @@
-// car.js — Car Physics with Suspension
+// car.js — Car Physics with Suspension & Skins
+const CAR_SKINS = {
+    red: { name: '🔴 แดงคลาสสิก', body: '#e74c3c', accent: '#c0392b', hub: '#e74c3c', window: '#85c1e9', headlight: '#f9e74a' },
+    blue: { name: '🔵 น้ำเงินเย็น', body: '#3498db', accent: '#2980b9', hub: '#3498db', window: '#a8d8ea', headlight: '#f9e74a' },
+    yellow: { name: '🟡 เหลืองซิ่ง', body: '#f1c40f', accent: '#d4ac0d', hub: '#f39c12', window: '#aed6f1', headlight: '#ffffff' },
+    green: { name: '🟢 เขียวทหาร', body: '#27ae60', accent: '#1e8449', hub: '#27ae60', window: '#a9dfbf', headlight: '#f9e74a' },
+};
+
+const LEVEL_PHYSICS = {
+    grassland: { friction: 1.0, fuelMod: 1.0, label: '🌿 ทุ่งหญ้า' },
+    desert: { friction: 0.9, fuelMod: 1.3, label: '🏜️ ทะเลทราย' },
+    snow: { friction: 0.65, fuelMod: 1.1, label: '❄️ หิมะ' },
+};
+
 class Car {
-    constructor(x, y) {
+    constructor(x, y, skinId = 'red', levelId = 'grassland') {
         // Body
         this.x = x;
         this.y = y;
@@ -12,6 +25,14 @@ class Car {
         this.height = 30;
         this.mass = 1.5;
 
+        // Skin
+        this.skin = CAR_SKINS[skinId] || CAR_SKINS.red;
+
+        // Level physics
+        const lp = LEVEL_PHYSICS[levelId] || LEVEL_PHYSICS.grassland;
+        this.frictionMod = lp.friction;
+        this.fuelMod = lp.fuelMod;
+
         // Wheels
         this.wheelBase = 60;
         this.wheelRadius = 12;
@@ -20,9 +41,8 @@ class Car {
 
         // Suspension parameters
         this.suspRest = 20;
-        this.suspRest = 20;
-        this.suspStiffness = 0.3; // Softer suspension
-        this.suspDamping = 0.3;   // More damping to stop bounce
+        this.suspStiffness = 0.3;
+        this.suspDamping = 0.3;
 
         // Engine
         this.enginePower = 1.5;
@@ -34,7 +54,7 @@ class Car {
         // Fuel
         this.fuel = 100;
         this.maxFuel = 100;
-        this.fuelConsumption = 0.03;
+        this.fuelConsumption = 0.03 * this.fuelMod;
 
         // State
         this.crashed = false;
@@ -81,8 +101,6 @@ class Car {
 
         if (this.rearWheel.grounded) {
             const compression = rearWheelBottom - rearGroundY;
-            // Damping should resist compression velocity.
-            // If vy is positive (moving down), we want more upward force.
             rearForce = compression * this.suspStiffness + this.vy * this.suspDamping;
             rearForce = Math.max(0, rearForce);
         }
@@ -113,18 +131,18 @@ class Car {
             this.angularVel += angleDiff * 0.08;
         }
 
-        // Engine force (Forward)
+        // Engine force (Forward) — apply friction modifier from level
         if (this.throttle > 0 && this.fuel > 0) {
             const grounded = this.rearWheel.grounded || this.frontWheel.grounded;
             if (grounded) {
                 const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-                // Check if we are moving forward or stopped
                 const movingForward = (this.vx * cosA + this.vy * sinA) > -1;
 
                 if (movingForward) {
                     const speedFactor = Math.max(0, 1 - speed / this.maxSpeed);
-                    this.vx += cosA * this.enginePower * this.throttle * speedFactor;
-                    this.vy += sinA * this.enginePower * this.throttle * speedFactor * 0.5;
+                    const power = this.enginePower * this.throttle * speedFactor * this.frictionMod;
+                    this.vx += cosA * power;
+                    this.vy += sinA * power * 0.5;
 
                     // Dust particles when accelerating
                     if (Math.random() < 0.3) {
@@ -144,24 +162,20 @@ class Car {
             this.fuel -= this.fuelConsumption * this.throttle;
             this.rpm = Math.min(1, this.rpm + 0.05);
         } else if (this.brake > 0 && this.fuel > 0) {
-            // Reverse / Brake logic
-            // If moving forward significant amount -> Brake
-            // If stopped or moving back -> Reverse
             const forwardVel = this.vx * cosA + this.vy * sinA;
             const grounded = this.rearWheel.grounded || this.frontWheel.grounded;
 
             if (grounded) {
                 if (forwardVel > 0.5) {
-                    // Braking
-                    this.vx *= (1 - this.brakePower * this.brake);
+                    this.vx *= (1 - this.brakePower * this.brake * this.frictionMod);
                     this.rpm = Math.max(0.1, this.rpm - 0.05);
                 } else {
-                    // Reversing
                     const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-                    const speedFactor = Math.max(0, 1 - speed / (this.maxSpeed * 0.5)); // Slower reverse
+                    const speedFactor = Math.max(0, 1 - speed / (this.maxSpeed * 0.5));
 
-                    this.vx -= cosA * this.enginePower * this.brake * 0.6 * speedFactor; // Reverse power 60%
-                    this.vy -= sinA * this.enginePower * this.brake * 0.6 * speedFactor * 0.5;
+                    const power = this.enginePower * this.brake * 0.6 * speedFactor * this.frictionMod;
+                    this.vx -= cosA * power;
+                    this.vy -= sinA * power * 0.5;
                     this.rpm = Math.min(0.8, this.rpm + 0.03);
                     this.fuel -= this.fuelConsumption * 0.5 * this.brake;
                 }
@@ -170,16 +184,12 @@ class Car {
             this.rpm = Math.max(0.1, this.rpm - 0.02);
         }
 
-        // Prevent sinking into terrain (only check chassis bottom)
+        // Prevent sinking into terrain
         const bodySurface = terrain.getSurfaceAt(this.x);
-        // Allow body to sink until it hits ground (height/2)
-        // Add small buffer so body doesn't scrape instantly
         const bodyBottom = this.y + this.height / 2 + 5;
         if (bodyBottom > bodySurface.y) {
             this.y = bodySurface.y - this.height / 2 - 5;
-            // Damping bounce: closer to 0 means less bounce
             if (this.vy > 0) this.vy *= -0.1;
-            // Add drag when chassis scrapes
             this.vx *= 0.9;
         }
 
@@ -288,8 +298,8 @@ class Car {
         ctx.ellipse(0, this.height / 2 + 15, this.width / 2 + 5, 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Body base
-        ctx.fillStyle = '#e74c3c';
+        // Body base — uses skin color
+        ctx.fillStyle = this.skin.body;
         this.roundRect(ctx, -this.width / 2, -this.height / 2, this.width, this.height, 6);
         ctx.fill();
 
@@ -302,8 +312,8 @@ class Car {
         this.roundRect(ctx, -this.width / 2, -this.height / 2, this.width, this.height, 6);
         ctx.fill();
 
-        // Cabin/window
-        ctx.fillStyle = '#85c1e9';
+        // Cabin/window — uses skin window color
+        ctx.fillStyle = this.skin.window;
         ctx.beginPath();
         ctx.moveTo(-5, -this.height / 2);
         ctx.lineTo(15, -this.height / 2 - 16);
@@ -322,10 +332,10 @@ class Car {
         ctx.closePath();
         ctx.fill();
 
-        // Headlight
-        ctx.fillStyle = '#f9e74a';
+        // Headlight — uses skin headlight color
+        ctx.fillStyle = this.skin.headlight;
         ctx.shadowBlur = 8;
-        ctx.shadowColor = '#f9e74a';
+        ctx.shadowColor = this.skin.headlight;
         ctx.beginPath();
         ctx.ellipse(this.width / 2 - 3, 2, 4, 6, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -355,10 +365,6 @@ class Car {
         ctx.save();
         ctx.translate(sx, sy);
         ctx.rotate(this.angle);
-
-        const rearAttach = { x: -this.wheelBase / 2, y: this.height / 2 - 2 };
-        const frontAttach = { x: this.wheelBase / 2, y: this.height / 2 - 2 };
-
         ctx.restore();
     }
 
@@ -398,10 +404,10 @@ class Car {
             ctx.stroke();
         }
 
-        // Hub
+        // Hub — uses skin hub color
         ctx.beginPath();
         ctx.arc(0, 0, 3, 0, Math.PI * 2);
-        ctx.fillStyle = '#e74c3c';
+        ctx.fillStyle = this.skin.hub;
         ctx.fill();
 
         ctx.restore();

@@ -7,15 +7,17 @@ class Game {
         this.audio = new AudioManager();
         this.camera = new Camera(this.canvas);
 
-        this.state = 'menu'; // menu, playing, gameover
+        this.state = 'login'; // login, menu, playing, gameover
         this.score = 0;
         this.coins = 0;
+        this.playerName = '';
+        this.selectedLevel = 'grassland';
+        this.selectedSkin = 'red';
         this.highScore = parseInt(localStorage.getItem('hcr_highScore') || '0');
         this.highDistance = parseInt(localStorage.getItem('hcr_highDist') || '0');
 
         // Input state
         this.keys = {};
-        this.touchGas = false;
         this.touchGas = false;
         this.touchBrake = false;
 
@@ -27,10 +29,13 @@ class Game {
         this.dt = 0;
 
         this.setupInput();
+        this.setupLogin();
+        this.setupSelections();
+        this.setupScoreboard();
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
-        // Start menu loop
+        // Start loop
         this.loop = this.loop.bind(this);
         requestAnimationFrame(this.loop);
     }
@@ -39,7 +44,199 @@ class Game {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
         this.camera.resize(this.canvas);
-        this.renderer = new Renderer(this.canvas);
+        this.renderer = new Renderer(this.canvas, this.selectedLevel);
+    }
+
+    // ─── Login System ────────────────────────────────────────
+    setupLogin() {
+        const loginBtn = document.getElementById('loginBtn');
+        const nameInput = document.getElementById('playerNameInput');
+
+        loginBtn.addEventListener('click', () => this.handleLogin());
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.handleLogin();
+        });
+    }
+
+    async handleLogin() {
+        const nameInput = document.getElementById('playerNameInput');
+        const errorDiv = document.getElementById('loginError');
+        const loadingDiv = document.getElementById('loginLoading');
+        const loginBtn = document.getElementById('loginBtn');
+        const name = nameInput.value.trim();
+
+        if (!name) {
+            errorDiv.textContent = 'กรุณากรอกชื่อผู้เล่น';
+            nameInput.focus();
+            return;
+        }
+
+        errorDiv.textContent = '';
+        loadingDiv.style.display = 'block';
+        loginBtn.disabled = true;
+
+        try {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'เกิดข้อผิดพลาด');
+
+            this.playerName = name;
+
+            if (data.player) {
+                this.highScore = data.player.score_statistics || 0;
+                this.highDistance = data.player.distance_statistics || 0;
+                localStorage.setItem('hcr_highScore', this.highScore);
+                localStorage.setItem('hcr_highDist', this.highDistance);
+            }
+
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('menuScreen').style.display = 'flex';
+            document.getElementById('playerNameDisplay').textContent = this.playerName;
+            document.getElementById('menuHighScore').textContent = this.highScore;
+
+            this.state = 'menu';
+        } catch (err) {
+            errorDiv.textContent = err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
+        } finally {
+            loadingDiv.style.display = 'none';
+            loginBtn.disabled = false;
+        }
+    }
+
+    // ─── Level & Skin Selection ──────────────────────────────
+    setupSelections() {
+        // Level selection
+        document.querySelectorAll('[data-level]').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('[data-level]').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                this.selectedLevel = card.dataset.level;
+            });
+        });
+
+        // Skin selection
+        document.querySelectorAll('[data-skin]').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('[data-skin]').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                this.selectedSkin = card.dataset.skin;
+            });
+        });
+    }
+
+    // ─── Scoreboard Modal ────────────────────────────────────
+    setupScoreboard() {
+        document.getElementById('scoreboardBtn').addEventListener('click', () => this.openScoreboard());
+        document.getElementById('closeScoreboardBtn').addEventListener('click', () => this.closeScoreboard());
+
+        // Close on backdrop click
+        document.getElementById('scoreboardModal').addEventListener('click', (e) => {
+            if (e.target.id === 'scoreboardModal') this.closeScoreboard();
+        });
+    }
+
+    async openScoreboard() {
+        const modal = document.getElementById('scoreboardModal');
+        const loadingDiv = document.getElementById('modalLeaderboardLoading');
+        const tableEl = document.getElementById('modalLeaderboardTable');
+        const bodyEl = document.getElementById('modalLeaderboardBody');
+
+        modal.style.display = 'flex';
+        loadingDiv.style.display = 'block';
+        loadingDiv.textContent = 'กำลังโหลด...';
+        tableEl.style.display = 'none';
+
+        try {
+            const res = await fetch('/api/leaderboard');
+            const data = await res.json();
+
+            if (data.leaderboard && data.leaderboard.length > 0) {
+                bodyEl.innerHTML = '';
+                data.leaderboard.forEach((entry, i) => {
+                    const row = document.createElement('tr');
+                    if (entry.name === this.playerName) row.classList.add('current-player');
+                    const medals = ['🥇', '🥈', '🥉'];
+                    row.innerHTML = `
+                        <td>${i < 3 ? medals[i] : (i + 1)}</td>
+                        <td>${entry.name}</td>
+                        <td>${entry.distance_statistics}m</td>
+                        <td>${entry.score_statistics}</td>
+                    `;
+                    bodyEl.appendChild(row);
+                });
+                loadingDiv.style.display = 'none';
+                tableEl.style.display = 'table';
+            } else {
+                loadingDiv.textContent = 'ยังไม่มีข้อมูล';
+            }
+        } catch (err) {
+            loadingDiv.textContent = 'ไม่สามารถโหลดข้อมูลได้';
+        }
+    }
+
+    closeScoreboard() {
+        document.getElementById('scoreboardModal').style.display = 'none';
+    }
+
+    // ─── Leaderboard (Game Over) ─────────────────────────────
+    async loadLeaderboard() {
+        const loadingDiv = document.getElementById('leaderboardLoading');
+        const tableEl = document.getElementById('leaderboardTable');
+        const bodyEl = document.getElementById('leaderboardBody');
+
+        loadingDiv.style.display = 'block';
+        loadingDiv.textContent = 'กำลังโหลด...';
+        tableEl.style.display = 'none';
+
+        try {
+            const res = await fetch('/api/leaderboard');
+            const data = await res.json();
+
+            if (data.leaderboard && data.leaderboard.length > 0) {
+                bodyEl.innerHTML = '';
+                data.leaderboard.forEach((entry, i) => {
+                    const row = document.createElement('tr');
+                    if (entry.name === this.playerName) row.classList.add('current-player');
+                    const medals = ['🥇', '🥈', '🥉'];
+                    row.innerHTML = `
+                        <td>${i < 3 ? medals[i] : (i + 1)}</td>
+                        <td>${entry.name}</td>
+                        <td>${entry.distance_statistics}m</td>
+                        <td>${entry.score_statistics}</td>
+                    `;
+                    bodyEl.appendChild(row);
+                });
+                loadingDiv.style.display = 'none';
+                tableEl.style.display = 'table';
+            } else {
+                loadingDiv.textContent = 'ยังไม่มีข้อมูล';
+            }
+        } catch (err) {
+            loadingDiv.textContent = 'ไม่สามารถโหลดข้อมูลได้';
+        }
+    }
+
+    // ─── Save Score to DB ────────────────────────────────────
+    async saveScore() {
+        try {
+            await fetch('/api/score', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: this.playerName,
+                    coin: this.coins,
+                    distance: this.car.maxDistance,
+                    score: this.score
+                })
+            });
+        } catch (err) {
+            console.error('Failed to save score:', err);
+        }
     }
 
     setupInput() {
@@ -82,9 +279,10 @@ class Game {
             () => this.touchBrake = false
         );
 
-        // Start button
+        // Buttons
         document.getElementById('startBtn').addEventListener('click', () => this.startGame());
         document.getElementById('restartBtn').addEventListener('click', () => this.startGame());
+        document.getElementById('mainMenuBtn').addEventListener('click', () => this.goToMenu());
 
         // Mute button
         document.getElementById('muteBtn').addEventListener('click', () => {
@@ -98,11 +296,23 @@ class Game {
         });
     }
 
+    goToMenu() {
+        this.state = 'menu';
+        document.getElementById('gameOverScreen').style.display = 'none';
+        document.getElementById('gameUI').style.display = 'none';
+        document.getElementById('controls').style.display = 'none';
+        document.getElementById('menuScreen').style.display = 'flex';
+        document.getElementById('menuHighScore').textContent = this.highScore;
+    }
+
     startGame() {
         this.audio.init();
-        this.terrain = new Terrain();
-        this.terrain = new Terrain();
-        this.car = new Car(100, 380); // Spawn closer to ground (y=400 is ground)
+
+        // Create terrain and car with selected level/skin
+        this.terrain = new Terrain(this.selectedLevel);
+        this.car = new Car(100, 380, this.selectedSkin, this.selectedLevel);
+        this.renderer = new Renderer(this.canvas, this.selectedLevel);
+
         this.camera.x = this.car.x;
         this.camera.y = this.car.y - 80;
         this.state = 'playing';
@@ -121,10 +331,8 @@ class Game {
         this.audio.playCrashSound();
         this.audio.stopEngine();
 
-        // Calculate final score
         this.score = this.car.distance + this.coins * 50;
 
-        // Update high scores
         if (this.score > this.highScore) {
             this.highScore = this.score;
             localStorage.setItem('hcr_highScore', this.highScore);
@@ -134,7 +342,8 @@ class Game {
             localStorage.setItem('hcr_highDist', this.highDistance);
         }
 
-        // Show game over screen
+        this.saveScore();
+
         document.getElementById('gameUI').style.display = 'none';
         document.getElementById('controls').style.display = 'none';
         document.getElementById('gameOverScreen').style.display = 'flex';
@@ -143,16 +352,16 @@ class Game {
         document.getElementById('finalScore').textContent = this.score;
         document.getElementById('bestDistance').textContent = this.highDistance + 'm';
         document.getElementById('bestScore').textContent = this.highScore;
+
+        this.loadLeaderboard();
     }
 
     update() {
         if (this.state !== 'playing') return;
 
-        // Input processing
         const gas = this.keys['ArrowUp'] || this.keys['w'] || this.keys['W'] || this.touchGas;
         const brake = this.keys['ArrowDown'] || this.keys['s'] || this.keys['S'] || this.touchBrake;
 
-        // Visual indicators
         const gasKey = document.getElementById('key-gas');
         const brakeKey = document.getElementById('key-brake');
         if (gasKey) gasKey.classList.toggle('active', !!gas);
@@ -161,7 +370,6 @@ class Game {
         this.car.throttle = gas ? 1 : 0;
         this.car.brake = brake ? 1 : 0;
 
-        // Update car physics
         this.car.update(this.terrain, this.dt);
 
         // Check for coin collection
@@ -196,30 +404,23 @@ class Game {
             }
         });
 
-        // Update camera
         this.camera.follow(this.car);
-
-        // Update audio
         this.audio.updateEngine(this.car.rpm, this.car.throttle);
 
-        // Update popups
         this.popups = this.popups.filter(p => {
             p.y -= 1;
             p.life--;
             return p.life > 0;
         });
 
-        // Update UI
         this.updateUI();
 
-        // Check game over
         if (this.car.crashed) {
             this.gameOver();
         }
     }
 
     updateUI() {
-        // Fuel bar
         const fuelFill = document.getElementById('fuelFill');
         const fuelPercent = (this.car.fuel / this.car.maxFuel) * 100;
         fuelFill.style.width = fuelPercent + '%';
@@ -230,7 +431,6 @@ class Game {
             fuelFill.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
         } else {
             fuelFill.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
-            // Pulse animation when low
             fuelFill.style.animation = 'pulse 0.5s infinite';
         }
 
@@ -238,26 +438,19 @@ class Game {
             fuelFill.style.animation = 'none';
         }
 
-        // Distance
         document.getElementById('distance').textContent = this.car.distance + 'm';
-
-        // Coins
         document.getElementById('coinCount').textContent = this.coins;
     }
 
     render() {
         const ctx = this.ctx;
 
-        // Draw background
         this.renderer.drawBackground(this.camera);
 
         if (this.state === 'playing' || this.state === 'gameover') {
-            // Draw terrain
             this.terrain.render(ctx, this.camera);
-            // Draw car
             this.car.render(ctx, this.camera);
 
-            // Draw popups
             const cx = ctx.canvas.width / 2;
             const cy = ctx.canvas.height / 2;
             this.popups.forEach(p => {

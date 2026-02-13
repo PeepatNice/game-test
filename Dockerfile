@@ -1,16 +1,16 @@
-FROM nginx:alpine
+FROM node:20-alpine
 
-# Remove default nginx website
-RUN rm -rf /usr/share/nginx/html/*
+WORKDIR /app
 
-# Copy nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install --production
 
 # Copy game files
-COPY . /usr/share/nginx/html
+COPY . .
 
-# Expose port 80
-EXPOSE 80
+# Expose port 3000
+EXPOSE 3000
 
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start the server
+CMD ["node", "server.js"]

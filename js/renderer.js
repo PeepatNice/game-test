@@ -1,8 +1,58 @@
-// renderer.js — Background & Environment Rendering
+// renderer.js — Background & Environment Rendering with Level Themes
+const SKY_THEMES = {
+    grassland: {
+        sky: [
+            { stop: 0, color: '#1a1a2e' },
+            { stop: 0.3, color: '#16213e' },
+            { stop: 0.6, color: '#0f3460' },
+            { stop: 0.85, color: '#e94560' },
+            { stop: 1, color: '#f5a623' },
+        ],
+        mountains: [
+            { parallax: 0.05, baseY: 0.45, color: '#1a1a3e', opacity: 0.6 },
+            { parallax: 0.1, baseY: 0.55, color: '#16213e', opacity: 0.7 },
+            { parallax: 0.2, baseY: 0.65, color: '#0f2847', opacity: 0.8 },
+        ],
+        cloudColor: '#ffffff',
+    },
+    desert: {
+        sky: [
+            { stop: 0, color: '#1a0f00' },
+            { stop: 0.2, color: '#4a2800' },
+            { stop: 0.5, color: '#b86e2a' },
+            { stop: 0.75, color: '#e8a044' },
+            { stop: 1, color: '#ffd280' },
+        ],
+        mountains: [
+            { parallax: 0.05, baseY: 0.50, color: '#5a3010', opacity: 0.5 },
+            { parallax: 0.1, baseY: 0.58, color: '#7a4820', opacity: 0.6 },
+            { parallax: 0.2, baseY: 0.68, color: '#9a6030', opacity: 0.7 },
+        ],
+        cloudColor: '#f5e1c0',
+    },
+    snow: {
+        sky: [
+            { stop: 0, color: '#0d1b2a' },
+            { stop: 0.3, color: '#1b2838' },
+            { stop: 0.55, color: '#3a5f7c' },
+            { stop: 0.8, color: '#7ba3c4' },
+            { stop: 1, color: '#b8d4e8' },
+        ],
+        mountains: [
+            { parallax: 0.05, baseY: 0.42, color: '#1b2838', opacity: 0.6 },
+            { parallax: 0.1, baseY: 0.52, color: '#2a4058', opacity: 0.7 },
+            { parallax: 0.2, baseY: 0.62, color: '#4a6a85', opacity: 0.8 },
+        ],
+        cloudColor: '#e0e8f0',
+    },
+};
+
 class Renderer {
-    constructor(canvas) {
+    constructor(canvas, levelId = 'grassland') {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
+        this.levelId = levelId;
+        this.theme = SKY_THEMES[levelId] || SKY_THEMES.grassland;
         this.clouds = [];
         this.stars = [];
 
@@ -18,7 +68,7 @@ class Renderer {
             });
         }
 
-        // Generate stars for night sky feel
+        // Generate stars
         for (let i = 0; i < 30; i++) {
             this.stars.push({
                 x: Math.random() * 2000,
@@ -38,13 +88,9 @@ class Renderer {
         const w = this.canvas.width;
         const h = this.canvas.height;
 
-        // Sky gradient
+        // Sky gradient — uses level theme
         const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-        skyGrad.addColorStop(0, '#1a1a2e');
-        skyGrad.addColorStop(0.3, '#16213e');
-        skyGrad.addColorStop(0.6, '#0f3460');
-        skyGrad.addColorStop(0.85, '#e94560');
-        skyGrad.addColorStop(1, '#f5a623');
+        this.theme.sky.forEach(s => skyGrad.addColorStop(s.stop, s.color));
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, w, h);
 
@@ -59,12 +105,10 @@ class Renderer {
             ctx.fill();
         });
 
-        // Far mountains (slow parallax)
-        this.drawMountainLayer(ctx, camera, 0.05, h * 0.45, '#1a1a3e', 0.6, 200, 80);
-        // Mid mountains
-        this.drawMountainLayer(ctx, camera, 0.1, h * 0.55, '#16213e', 0.7, 150, 100);
-        // Near mountains
-        this.drawMountainLayer(ctx, camera, 0.2, h * 0.65, '#0f2847', 0.8, 120, 120);
+        // Mountains — uses level theme
+        this.theme.mountains.forEach(m => {
+            this.drawMountainLayer(ctx, camera, m.parallax, h * m.baseY, m.color, m.opacity, 200, 80 + Math.random());
+        });
 
         // Clouds
         this.clouds.forEach(cloud => {
@@ -73,19 +117,18 @@ class Renderer {
 
             ctx.save();
             ctx.globalAlpha = cloud.opacity;
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = this.theme.cloudColor;
 
-            // Cloud shape with multiple circles
-            const cx = sx;
-            const cy = cloud.y;
+            const ccx = sx;
+            const ccy = cloud.y;
             ctx.beginPath();
-            ctx.ellipse(cx, cy, cloud.width / 2, cloud.height / 2, 0, 0, Math.PI * 2);
+            ctx.ellipse(ccx, ccy, cloud.width / 2, cloud.height / 2, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.ellipse(cx - cloud.width * 0.25, cy + 5, cloud.width * 0.3, cloud.height * 0.4, 0, 0, Math.PI * 2);
+            ctx.ellipse(ccx - cloud.width * 0.25, ccy + 5, cloud.width * 0.3, cloud.height * 0.4, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.ellipse(cx + cloud.width * 0.25, cy + 3, cloud.width * 0.35, cloud.height * 0.45, 0, 0, Math.PI * 2);
+            ctx.ellipse(ccx + cloud.width * 0.25, ccy + 3, cloud.width * 0.35, cloud.height * 0.45, 0, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.restore();

@@ -1,6 +1,50 @@
-// terrain.js — Procedural Terrain Generation
+// terrain.js — Procedural Terrain Generation with Level Themes
+const LEVEL_THEMES = {
+    grassland: {
+        terrainGradient: [
+            { stop: 0, color: '#4a7c3f' },
+            { stop: 0.3, color: '#3d6b35' },
+            { stop: 0.7, color: '#5c3d2e' },
+            { stop: 1, color: '#3e2a1f' },
+        ],
+        surfaceLine: '#6abf5e',
+        grassColor: '#7dd97a',
+        difficultyScale: 1.0,
+        coinRate: 0.04,
+        fuelRate: 0.012,
+    },
+    desert: {
+        terrainGradient: [
+            { stop: 0, color: '#d4a853' },
+            { stop: 0.3, color: '#c49340' },
+            { stop: 0.7, color: '#a07030' },
+            { stop: 1, color: '#6e4b26' },
+        ],
+        surfaceLine: '#e8c96a',
+        grassColor: '#c4a44a',
+        difficultyScale: 1.4,
+        coinRate: 0.035,
+        fuelRate: 0.008,
+    },
+    snow: {
+        terrainGradient: [
+            { stop: 0, color: '#e8edf2' },
+            { stop: 0.3, color: '#ccd5de' },
+            { stop: 0.7, color: '#8fa5b8' },
+            { stop: 1, color: '#5a7a95' },
+        ],
+        surfaceLine: '#f0f4f8',
+        grassColor: '#d0dce8',
+        difficultyScale: 1.1,
+        coinRate: 0.04,
+        fuelRate: 0.01,
+    },
+};
+
 class Terrain {
-    constructor() {
+    constructor(levelId = 'grassland') {
+        this.levelId = levelId;
+        this.theme = LEVEL_THEMES[levelId] || LEVEL_THEMES.grassland;
         this.points = [];
         this.segmentWidth = 15;
         this.generatedUpTo = 0;
@@ -11,13 +55,12 @@ class Terrain {
     }
 
     generate(fromX, toX) {
-        const startIndex = this.points.length;
         for (let x = this.generatedUpTo; x <= toX; x += this.segmentWidth) {
             const y = this.getHeight(x);
             this.points.push({ x, y });
 
-            // Spawn coins randomly on terrain
-            if (Math.random() < 0.04 && x > 200) {
+            // Spawn coins
+            if (Math.random() < this.theme.coinRate && x > 200) {
                 this.coins.push({
                     x: x,
                     y: y - 40 - Math.random() * 30,
@@ -28,7 +71,7 @@ class Terrain {
             }
 
             // Spawn fuel cans
-            if (Math.random() < 0.012 && x > 400) {
+            if (Math.random() < this.theme.fuelRate && x > 400) {
                 this.fuelCans.push({
                     x: x,
                     y: y - 35,
@@ -42,21 +85,18 @@ class Terrain {
     }
 
     getHeight(x) {
-        // Flat starting area
         if (x < 150) return 400;
-        
-        // Smooth transition from flat to hills
-        const t = Math.min(1, (x - 150) / 200);
 
-        // Multiple sine waves for natural terrain
+        const t = Math.min(1, (x - 150) / 200);
+        const ds = this.theme.difficultyScale;
+
         let h = 400;
         h += Math.sin(x * 0.005) * 80 * t;
         h += Math.sin(x * 0.012 + 1.3) * 50 * t;
-        h += Math.sin(x * 0.025 + 2.7) * 30 * t;
+        h += Math.sin(x * 0.025 + 2.7) * 30 * t * ds;
         h += Math.sin(x * 0.003 + 0.5) * 100 * t;
 
-        // Gradual difficulty — steeper hills as you go further
-        const difficultyFactor = Math.min(2.5, 1 + x * 0.00015);
+        const difficultyFactor = Math.min(2.5, 1 + x * 0.00015) * ds;
         h += Math.sin(x * 0.008 + 4.1) * 60 * difficultyFactor * t;
         h += Math.sin(x * 0.018 + 3.3) * 25 * difficultyFactor * t;
 
@@ -64,7 +104,6 @@ class Terrain {
     }
 
     getSurfaceAt(x) {
-        // Find the segment containing x
         const index = Math.floor((x - this.points[0]?.x || 0) / this.segmentWidth);
         if (index < 0 || index >= this.points.length - 1) {
             return { y: 400, normal: { x: 0, y: -1 } };
@@ -75,13 +114,11 @@ class Terrain {
         const t = (x - p1.x) / (p2.x - p1.x);
         const y = p1.y + (p2.y - p1.y) * t;
 
-        // Calculate surface normal
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;
         const len = Math.sqrt(dx * dx + dy * dy);
         const normal = { x: -dy / len, y: dx / len };
 
-        // Ensure normal points upward
         if (normal.y > 0) {
             normal.x = -normal.x;
             normal.y = -normal.y;
@@ -120,18 +157,14 @@ class Terrain {
             }
         }
 
-        // Close the terrain shape
         const canvasH = ctx.canvas.height;
         ctx.lineTo(endX - camera.x + ctx.canvas.width / 2, canvasH + 100);
         ctx.lineTo(startX - camera.x + ctx.canvas.width / 2, canvasH + 100);
         ctx.closePath();
 
-        // Terrain gradient
+        // Terrain gradient — uses level theme
         const grd = ctx.createLinearGradient(0, 300, 0, canvasH);
-        grd.addColorStop(0, '#4a7c3f');
-        grd.addColorStop(0.3, '#3d6b35');
-        grd.addColorStop(0.7, '#5c3d2e');
-        grd.addColorStop(1, '#3e2a1f');
+        this.theme.terrainGradient.forEach(g => grd.addColorStop(g.stop, g.color));
         ctx.fillStyle = grd;
         ctx.fill();
 
@@ -151,11 +184,11 @@ class Terrain {
                 ctx.lineTo(screenX, screenY);
             }
         }
-        ctx.strokeStyle = '#6abf5e';
+        ctx.strokeStyle = this.theme.surfaceLine;
         ctx.lineWidth = 3;
         ctx.stroke();
 
-        // Draw grass details on surface
+        // Draw grass/surface details
         for (let i = 0; i < this.points.length; i++) {
             const p = this.points[i];
             if (p.x < startX) continue;
@@ -168,7 +201,7 @@ class Terrain {
                 ctx.moveTo(screenX, screenY);
                 ctx.lineTo(screenX - 3, screenY - 8);
                 ctx.lineTo(screenX + 3, screenY - 6);
-                ctx.strokeStyle = '#7dd97a';
+                ctx.strokeStyle = this.theme.grassColor;
                 ctx.lineWidth = 1;
                 ctx.stroke();
             }
@@ -188,11 +221,9 @@ class Terrain {
             ctx.translate(sx, sy);
             ctx.scale(scaleX, 1);
 
-            // Coin glow
             ctx.shadowBlur = 15;
             ctx.shadowColor = '#ffd700';
 
-            // Coin body
             ctx.beginPath();
             ctx.arc(0, 0, coin.radius, 0, Math.PI * 2);
             ctx.fillStyle = '#ffd700';
@@ -201,7 +232,6 @@ class Terrain {
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Dollar sign
             ctx.shadowBlur = 0;
             ctx.fillStyle = '#b8860b';
             ctx.font = 'bold 14px Arial';
@@ -222,21 +252,18 @@ class Terrain {
             ctx.save();
             ctx.translate(sx, sy);
 
-            // Fuel can body
             ctx.fillStyle = '#e74c3c';
             ctx.fillRect(-fuel.width / 2, -fuel.height / 2, fuel.width, fuel.height);
             ctx.strokeStyle = '#c0392b';
             ctx.lineWidth = 2;
             ctx.strokeRect(-fuel.width / 2, -fuel.height / 2, fuel.width, fuel.height);
 
-            // Fuel label
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 11px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('F', 0, 0);
 
-            // Fuel cap
             ctx.fillStyle = '#c0392b';
             ctx.fillRect(-4, -fuel.height / 2 - 5, 8, 7);
 
