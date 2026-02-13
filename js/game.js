@@ -326,7 +326,7 @@ class Game {
         document.getElementById('controls').style.display = 'flex';
     }
 
-    gameOver() {
+    async gameOver() {
         this.state = 'gameover';
         this.audio.playCrashSound();
         this.audio.stopEngine();
@@ -342,7 +342,7 @@ class Game {
             localStorage.setItem('hcr_highDist', this.highDistance);
         }
 
-        this.saveScore();
+        await this.saveScore();
 
         document.getElementById('gameUI').style.display = 'none';
         document.getElementById('controls').style.display = 'none';
