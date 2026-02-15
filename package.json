@@ -4,7 +4,7 @@
   "description": "Hill Climb Racing Game with PostgreSQL backend",
   "main": "server.js",
   "scripts": {
-    "start": "node --dns-result-order=ipv4first server.js",
+    "start": "node server.js",
     "dev": "node server.js"
   },
   "dependencies": {
