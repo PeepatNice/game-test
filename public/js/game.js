@@ -1,4 +1,10 @@
 // game.js — Main Game Loop & State Management
+
+// Determine API URL based on environment
+// If running on mobile (Capacitor) or not on local dev server, use Production Backend
+const isLocalDev = window.location.hostname === 'localhost' && window.location.port === '3000';
+const API_BASE_URL = isLocalDev ? '' : 'https://game-test-8mxn.onrender.com';
+
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -76,7 +82,7 @@ class Game {
         loginBtn.disabled = true;
 
         try {
-            const res = await fetch('/api/login', {
+            const res = await fetch(`${API_BASE_URL}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name })
@@ -152,7 +158,7 @@ class Game {
         tableEl.style.display = 'none';
 
         try {
-            const res = await fetch('/api/leaderboard');
+            const res = await fetch(`${API_BASE_URL}/api/leaderboard`);
             const data = await res.json();
 
             if (data.leaderboard && data.leaderboard.length > 0) {
@@ -194,7 +200,7 @@ class Game {
         tableEl.style.display = 'none';
 
         try {
-            const res = await fetch('/api/leaderboard');
+            const res = await fetch(`${API_BASE_URL}/api/leaderboard`);
             const data = await res.json();
 
             if (data.leaderboard && data.leaderboard.length > 0) {
@@ -224,7 +230,7 @@ class Game {
     // ─── Save Score to DB ────────────────────────────────────
     async saveScore() {
         try {
-            await fetch('/api/score', {
+            await fetch(`${API_BASE_URL}/api/score`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

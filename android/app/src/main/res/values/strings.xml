@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hill Climb Racing</string>
+    <string name="title_activity_main">Hill Climb Racing</string>
+    <string name="package_name">com.nice.hillclimbracing</string>
+    <string name="custom_url_scheme">com.nice.hillclimbracing</string>
+</resources>
