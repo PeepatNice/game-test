@@ -10,7 +10,8 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // PostgreSQL connection
 const pool = new Pool({
@@ -141,7 +142,7 @@ app.get('/api/leaderboard', async (req, res) => {
 
 // ─── Fallback: serve index.html for SPA ──────────────────
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // ─── Start Server ────────────────────────────────────────
