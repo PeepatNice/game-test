@@ -13,45 +13,25 @@ app.use(express.json());
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-const dns = require('dns').promises;
+const pool = new Pool({
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT),
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    // Connection pool settings
+    max: parseInt(process.env.DB_MAX_CONNECTIONS),
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 15000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+});
 
-// ... existing code ...
-
-let pool;
-
-async function initializeDatabase() {
-    try {
-        let dbHost = process.env.DB_HOST || '103.2.113.228';
-
-        // Force IPv4 resolution for Render/Supabase compatibility
-        if (dbHost !== 'localhost' && !dbHost.match(/^\d+\.\d+\.\d+\.\d+$/)) {
-            console.log(`🔍 Resolving IPv4 for ${dbHost}...`);
-            const addresses = await dns.resolve4(dbHost);
-            if (addresses && addresses.length > 0) {
-                dbHost = addresses[0];
-                console.log(`✅ Resolved ${process.env.DB_HOST} to IPv4: ${dbHost}`);
-            }
-        }
-
-        pool = new Pool({
-            host: dbHost,
-            port: parseInt(process.env.DB_PORT) || 5432,
-            database: process.env.DB_NAME || 'game-test',
-            user: process.env.DB_USER || 'postgres',
-            password: process.env.DB_PASSWORD || '',
-            // Connection pool settings
-            max: parseInt(process.env.DB_MAX_CONNECTIONS) || 10,
-            idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 15000,
-            keepAlive: true,
-            keepAliveInitialDelayMillis: 10000,
-        });
-
-        await testConnection();
-    } catch (error) {
-        console.error('❌ Failed to initialize database:', error);
-    }
+if (process.env.DB_HOST) {
+    console.log(`🔌 DB_HOST Hex: ${Buffer.from(process.env.DB_HOST).toString('hex')}`);
+    console.log(`🔌 DB_HOST Str: '${process.env.DB_HOST}'`);
 }
+
 
 // Test DB connection on startup with retry
 async function testConnection(retries = 5) {
@@ -71,7 +51,7 @@ async function testConnection(retries = 5) {
     console.error('⚠️  Could not connect to database. Server will continue but DB features may not work.');
 }
 
-initializeDatabase();
+testConnection();
 
 
 // ─── API Routes ──────────────────────────────────────────
